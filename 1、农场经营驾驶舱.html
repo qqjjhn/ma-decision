@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理会计经营驾驶舱 · 农场经营虚拟仿真</title>
+<style>
+  /* ============ 全局主题（浅绿农业风）============
+     主色 #2e7d32，辅助绿 #66bb6a，背景 #f1f8f4，卡片白底圆角 */
+  :root{
+    --green:#2e7d32;
+    --green-light:#66bb6a;
+    --green-pale:#e8f5e9;
+    --bg:#f1f8f4;
+    --card:#ffffff;
+    --ink:#1b3a22;
+    --ink-soft:#4f6b56;
+    --line:#cfe8d4;
+    --amber:#f9a825;
+    --radius:18px;
+    --shadow:0 6px 20px rgba(46,125,50,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;
+    background:
+      radial-gradient(1200px 500px at 80% -10%, #d8efdc 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    padding:24px 16px 60px;
+    line-height:1.6;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* ===== 顶部标题栏 ===== */
+  header{
+    background:linear-gradient(120deg,#2e7d32,#43a047);
+    color:#fff;border-radius:var(--radius);
+    padding:22px 28px;box-shadow:var(--shadow);
+    position:relative;overflow:hidden;
+  }
+  header::after{
+    content:"";position:absolute;right:-40px;top:-40px;
+    width:180px;height:180px;border-radius:50%;
+    background:rgba(255,255,255,.12);
+  }
+  header h1{font-size:26px;letter-spacing:2px;display:flex;align-items:center;gap:12px}
+  header .leaf{width:34px;height:34px}
+  header p{opacity:.92;margin-top:6px;font-size:14px}
+
+  /* ===== 顶部 SVG 仪表盘区（驾驶舱指标）===== */
+  .gauges{
+    display:flex;gap:18px;flex-wrap:wrap;
+    margin:18px 0 6px;justify-content:center;
+  }
+  .gauge{
+    background:var(--card);border-radius:16px;padding:14px 18px;
+    box-shadow:var(--shadow);text-align:center;min-width:150px;flex:1 1 150px;
+  }
+  .gauge .g-label{font-size:13px;color:var(--ink-soft)}
+  .gauge .g-val{font-size:14px;color:var(--green);font-weight:700;margin-top:2px}
+
+  /* ===== 模块卡片网格 ===== */
+  .grid{
+    display:grid;gap:18px;margin-top:22px;
+    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  }
+  .module{
+    background:var(--card);border-radius:var(--radius);
+    padding:20px;box-shadow:var(--shadow);cursor:pointer;
+    border:1px solid var(--line);transition:transform .18s,box-shadow .18s;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .module:hover{transform:translateY(-4px);box-shadow:0 12px 26px rgba(46,125,50,.2)}
+  .module .ic{
+    width:50px;height:50px;border-radius:14px;
+    background:var(--green-pale);display:flex;align-items:center;justify-content:center;
+  }
+  .module .ic svg{width:30px;height:30px}
+  .module h3{font-size:17px;color:var(--green)}
+  .module .sub{font-size:13px;color:var(--ink-soft)}
+  .module .tag{
+    align-self:flex-start;font-size:12px;color:#fff;background:var(--green-light);
+    padding:2px 10px;border-radius:20px;margin-top:auto;
+  }
+
+  /* ===== 概念卡（悬停/点击展开）===== */
+  .concept{
+    margin-top:10px;background:var(--green-pale);border-radius:12px;
+    border:1px dashed var(--green-light);overflow:hidden;
+  }
+  .concept .c-head{
+    padding:10px 12px;font-size:13px;font-weight:700;color:var(--green);
+    cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+    user-select:none;
+  }
+  .concept .c-head .arrow{transition:transform .2s}
+  .concept.open .c-head .arrow{transform:rotate(180deg)}
+  .concept .c-body{
+    max-height:0;overflow:hidden;transition:max-height .3s ease;
+    font-size:13px;color:var(--ink-soft);padding:0 12px;
+  }
+  .concept.open .c-body{max-height:240px;padding:0 12px 12px}
+
+  /* ===== 底部测验按钮 ===== */
+  .footer-bar{
+    margin-top:34px;display:flex;flex-direction:column;align-items:center;gap:14px;
+  }
+  .btn{
+    background:var(--green);color:#fff;border:none;border-radius:30px;
+    padding:13px 34px;font-size:16px;cursor:pointer;box-shadow:var(--shadow);
+    transition:background .18s,transform .1s;
+  }
+  .btn:hover{background:#256628}
+  .btn:active{transform:scale(.97)}
+  .badge{
+    display:none;align-items:center;gap:8px;background:#fff;color:var(--green);
+    border:2px solid var(--green-light);border-radius:30px;padding:8px 20px;
+    font-weight:700;box-shadow:var(--shadow);
+  }
+  .badge.show{display:flex;animation:pop .4s}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+
+  /* ===== 弹层（模块信息 / 测验）===== */
+  .overlay{
+    position:fixed;inset:0;background:rgba(20,50,28,.55);
+    display:none;align-items:center;justify-content:center;padding:20px;z-index:50;
+    backdrop-filter:blur(3px);
+  }
+  .overlay.show{display:flex}
+  .panel{
+    background:#fff;border-radius:var(--radius);max-width:560px;width:100%;
+    max-height:88vh;overflow:auto;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.3);
+    animation:rise .25s;
+  }
+  @keyframes rise{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .panel h2{color:var(--green);font-size:20px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .panel .close{
+    float:right;cursor:pointer;color:var(--ink-soft);font-size:22px;line-height:1;
+    border:none;background:none;
+  }
+  .block{
+    border-radius:14px;padding:14px 16px;margin-top:14px;font-size:14px;
+  }
+  .block.ma{background:var(--green-pale);border-left:5px solid var(--green)}
+  .block.fa{background:#fdf3e7;border-left:5px solid var(--amber)}
+  .block .t{font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .block .ma-t{color:var(--green)}
+  .block .fa-t{color:#b26a00}
+  .diff{
+    margin-top:14px;font-size:13px;color:var(--ink-soft);
+    background:#f6faf7;border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+  }
+  .diff b{color:var(--green)}
+
+  /* ===== 测验样式 ===== */
+  .quiz-q{margin-top:18px}
+  .quiz-q .qt{font-weight:700;color:var(--ink);margin-bottom:8px}
+  .opt{
+    display:block;width:100%;text-align:left;border:1px solid var(--line);
+    background:#fafdfb;border-radius:10px;padding:10px 12px;margin-bottom:8px;
+    cursor:pointer;font-size:14px;transition:background .15s,border .15s;color:var(--ink);
+  }
+  .opt:hover{background:var(--green-pale)}
+  .opt.correct{background:#e6f4ea;border-color:var(--green);color:var(--green);font-weight:700}
+  .opt.wrong{background:#fdecea;border-color:#e57373;color:#c62828}
+  .exp{
+    font-size:13px;color:var(--ink-soft);background:#f6faf7;border-radius:10px;
+    padding:10px 12px;margin-top:6px;display:none;
+  }
+  .exp.show{display:block}
+  .quiz-result{
+    margin-top:18px;text-align:center;font-size:16px;font-weight:700;color:var(--green);
+  }
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:8px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ 顶部标题（对应教材：第1章 管理会计概论 1.1 管理会计及其发展）============ -->
+  <header>
+    <h1>
+      <!-- 内嵌 SVG 叶片 logo -->
+      <svg class="leaf" viewBox="0 0 24 24" fill="#fff"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66C7.5 17.5 9.7 13.6 17 12V8zm-2-2c-3 0-6 1.5-8 4.5l1.6 1.2C10 11 12.2 9.8 15 9.8V6z"/></svg>
+      管理会计经营驾驶舱
+    </h1>
+    <p>虚拟仿真场景：你正在经营「湘农生态家庭农场」——点击下方模块，体验管理会计如何为农场主提供内部决策信息。</p>
+  </header>
+
+  <!-- ============ 顶部仪表盘（装饰性 SVG 仪表，体现"驾驶舱"大屏感）============ -->
+  <div class="gauges" id="gauges"></div>
+
+  <!-- ============ 5 个模块卡片（对应教材 1.2 管理会计的职能与作用 / 1.3 管理会计与财务会计的关系）============ -->
+  <div class="grid" id="grid"></div>
+
+  <!-- ============ 底部入门测验 ============ -->
+  <div class="footer-bar">
+    <button class="btn" id="quizBtn">📝 入门测验（管理会计认知）</button>
+    <div class="badge" id="badge">✅ 认知通过 · 你已建立管理会计基础认知</div>
+  </div>
+
+</div>
+
+<!-- ============ 弹层（模块信息 / 测验 共用）============ -->
+<div class="overlay" id="overlay">
+  <div class="panel" id="panel"></div>
+</div>
+
+<script>
+/* ============================================================
+   教材知识点映射说明（孙茂竹《管理会计学》第10版 第1章 1.1–1.3）
+   - 1.1 管理会计及其发展：管会定义、服务对象（内部）、发展历程
+   - 1.2 管理会计的职能与作用：预测/决策/规划/控制/评价
+   - 1.3 管理会计与财务会计的关系：区别与联系（对象、重点、时效、信息特征）
+   每个模块卡片与概念卡均标注其对应的小节。
+   ============================================================ */
+
+/* ---------- SVG 图标库（5 个模块 + 概念标识）---------- */
+const ICONS = {
+  cost:'<svg viewBox="0 0 24 24" fill="#2e7d32"><path d="M11 2 4 7v10l7 5 7-5V7l-7-5zm0 2.3 5 3.57V15l-5 3.57L6 15V7.87l5-3.57zM11 8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>',
+  budget:'<svg viewBox="0 0 24 24" fill="#2e7d32"><path d="M4 4h16v4H4V4zm1 6h6v2H5v-2zm0 4h6v2H5v-2zm9-4h5v2h-5v-2zm0 4h5v2h-5v-2zM3 3v18" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg>',
+  profit:'<svg viewBox="0 0 24 24" fill="#2e7d32"><path d="M5 18h14v2H5v-2zM7 14l3-4 3 3 4-6 2 1-5 8-3-3-3 4-1-1z"/></svg>',
+  cash:'<svg viewBox="0 0 24 24" fill="#2e7d32"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 15a7 7 0 0 1-4-1.2c.6-1.3 2-2 4-2s3.4.7 4 2A7 7 0 0 1 12 20z"/></svg>',
+  perf:'<svg viewBox="0 0 24 24" fill="#2e7d32"><path d="M3 13h2v8H3v-8zm4-6h2v14H7V7zm4 3h2v11h-2V10zm4-5h2v16h-2V5zm4 8h2v8h-2v-8z"/></svg>'
+};
+
+/* ---------- 顶部仪表盘数据 ---------- */
+const GAUGES = [
+  {label:'预算执行率', val:84, color:'#2e7d32'},
+  {label:'综合盈利指数', val:78, color:'#43a047'},
+  {label:'资金健康度', val:91, color:'#66bb6a'}
+];
+
+/* ---------- 5 个模块数据 ----------
+   每个模块：管理会计信息(ma) / 财务会计呈现(fa) / 差异一句话(diff) / 概念卡(concept) */
+const MODULES = [
+  {
+    id:'cost', icon:ICONS.cost, name:'成本中心',
+    sub:'按作业分解水稻种植成本',
+    ma:'水稻每亩变动成本 680 元、固定成本 12 万元（按作业成本法分配到 3 个种植区：育苗 / 灌溉 / 收割）。',
+    fa:'仅在利润表中体现“主营业务成本”总额，不区分变动 / 固定，也不分作业环节。',
+    diff:'管理会计提供<strong>内部决策用的精细化成本分解</strong>；财务会计只对外披露汇总成本。',
+    // 对应 1.1 管理会计定义（内部信息服务）
+    concept:{title:'概念卡 · 管理会计基本理论（1.1）',
+      body:'管理会计是以提高经济效益为目的，运用预测、决策、规划、控制、评价等方法，为单位内部管理提供信息支持的管理活动。它面向内部、服务决策，不强制对外披露。'}
+  },
+  {
+    id:'budget', icon:ICONS.budget, name:'预算执行',
+    sub:'事前预算 + 事中差异控制',
+    ma:'8 月肥料预算 4.5 万元，实际支出 3.8 万元，执行率 84%，差异预警为绿色（节约）。',
+    fa:'仅在总账中记录实际发生额，无预算口径，也无执行率对比。',
+    diff:'管理会计强调<strong>事前预算与事中控制</strong>；财务会计是事后记录，不做对比分析。',
+    concept:{title:'概念卡 · 决策有用观（1.1）',
+      body:'决策有用观认为：会计信息的有用性在于帮助企业内部管理者做出更优决策，而非仅满足外部报告与合规。管理会计的一切方法都围绕“对决策有用”展开。'}
+  },
+  {
+    id:'profit', icon:ICONS.profit, name:'品种盈利',
+    sub:'本量利分析看哪种作物更赚',
+    ma:'水稻亩净利 420 元、草莓亩净利 1100 元；本量利分析显示草莓贡献毛益率更高，建议适度扩种。',
+    fa:'仅在利润表体现整体“净利润”总额，不分品种、不分地块。',
+    diff:'管理会计按<strong>产品 / 责任维度做盈利分析</strong>支持决策；财务会计只汇总一个总数。',
+    concept:{title:'概念卡 · 成本性态分析（1.2 规划职能）',
+      body:'成本性态分析将成本划分为变动成本与固定成本，是预测、本量利分析与短期决策的基础，体现管理会计的“规划”职能。'}
+  },
+  {
+    id:'cash', icon:ICONS.cash, name:'资金流向',
+    sub:'季节性资金缺口预测与调度',
+    ma:'预测 3 月需垫资 8 万元（购种 + 农资），存在季节性资金缺口，建议安排短期融资。',
+    fa:'现金流量表按经营 / 投资 / 筹资三类汇总披露历史现金流，不预测未来。',
+    diff:'管理会计关注<strong>未来现金流预测与调度</strong>；财务会计反映已经发生的历史现金流。',
+    concept:{title:'概念卡 · 资金时间价值（1.2 决策职能）',
+      body:'资金时间价值指货币随时间推移而产生的增值。管理会计在投资、融资与定价决策中必须考虑它，体现“决策”职能。'}
+  },
+  {
+    id:'perf', icon:ICONS.perf, name:'绩效看板',
+    sub:'责任中心 ROI 与 KPI 考评',
+    ma:'各种植区 ROI 与 KPI 评分：A 区 18%、B 区 12%；据此发放绩效奖金并优化资源配置。',
+    fa:'仅披露整体财务指标（如净资产收益率），不区分内部责任中心。',
+    diff:'管理会计面向<strong>内部责任中心考核与激励</strong>；财务会计面向外部利益相关者。',
+    concept:{title:'概念卡 · 责任会计（1.2 控制与评价职能）',
+      body:'责任会计将内部单位划分为成本、利润、投资中心，并据以考核其业绩，体现管理会计的“控制”与“评价”职能。'}
+  }
+];
+
+/* ---------- 渲染顶部仪表盘（内嵌 SVG 半圆 / 环形进度）---------- */
+function buildGauge(g){
+  const r=34, c=2*Math.PI*r, off=c*(1-g.val/100);
+  return `<div class="gauge">
+    <svg viewBox="0 0 100 100" width="92" height="92">
+      <circle cx="50" cy="50" r="${r}" fill="none" stroke="#e0efe4" stroke-width="9"/>
+      <circle cx="50" cy="50" r="${r}" fill="none" stroke="${g.color}" stroke-width="9"
+        stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"
+        transform="rotate(-90 50 50)"/>
+      <text x="50" y="56" text-anchor="middle" font-size="20" font-weight="700" fill="#2e7d32">${g.val}</text>
+    </svg>
+    <div class="g-label">${g.label}</div>
+  </div>`;
+}
+document.getElementById('gauges').innerHTML = GAUGES.map(buildGauge).join('');
+
+/* ---------- 渲染 5 个模块卡片 + 概念卡 ---------- */
+function buildModule(m){
+  return `<div class="module" data-id="${m.id}">
+    <div class="ic">${m.icon}</div>
+    <h3>${m.name}</h3>
+    <div class="sub">${m.sub}</div>
+    <span class="tag">点击查看管理会计信息 ▸</span>
+    <div class="concept" data-concept="${m.id}">
+      <div class="c-head">💡 ${m.concept.title}<span class="arrow">▾</span></div>
+      <div class="c-body">${m.concept.body}</div>
+    </div>
+  </div>`;
+}
+document.getElementById('grid').innerHTML = MODULES.map(buildModule).join('');
+
+/* ---------- 模块卡片点击 → 弹出信息层 ---------- */
+const overlay = document.getElementById('overlay');
+const panel = document.getElementById('panel');
+
+function openModule(id){
+  const m = MODULES.find(x=>x.id===id);
+  panel.innerHTML = `
+    <button class="close" onclick="closeOverlay()">✕</button>
+    <h2>${m.icon}${m.name}</h2>
+    <div class="block ma">
+      <div class="t ma-t">🌱 管理会计提供的信息（农场视角）</div>
+      <div>${m.ma}</div>
+    </div>
+    <div class="block fa">
+      <div class="t fa-t">📒 财务会计会如何呈现</div>
+      <div>${m.fa}</div>
+    </div>
+    <div class="diff">🔍 <b>核心差异：</b>${m.diff}</div>`;
+  overlay.classList.add('show');
+}
+
+document.getElementById('grid').addEventListener('click', e=>{
+  const card = e.target.closest('.module');
+  if(!card) return;
+  // 点击概念卡标题 → 展开/收起（不触发模块弹层）
+  const cHead = e.target.closest('.c-head');
+  if(cHead){ cHead.parentElement.classList.toggle('open'); return; }
+  openModule(card.dataset.id);
+});
+
+function closeOverlay(){ overlay.classList.remove('show'); }
+overlay.addEventListener('click', e=>{ if(e.target===overlay) closeOverlay(); });
+
+/* ---------- 入门测验（3 题，正确率 ≥ 80% 显示徽章）---------- */
+const QUIZ = [
+  { q:'管理会计与财务会计最本质的区别是？',
+    opts:['A. 核算方法完全不同','B. 服务对象不同：管会服务内部管理者，财会服务外部利益相关者','C. 两者都只对外部报告','D. 管会不使用货币计量'],
+    ans:1,
+    exp:'管理会计面向企业内部、为经营决策服务；财务会计面向外部、满足报告与合规。服务对象不同是两者最根本的区别（对应 1.3）。' },
+  { q:'下列哪项属于管理会计在“成本中心”提供的信息？',
+    opts:['A. 利润表中的主营业务成本总额','B. 水稻每亩变动成本 680 元、固定成本 12 万','C. 资产负债表中的存货金额','D. 现金流量表的经营活动净额'],
+    ans:1,
+    exp:'管会将成本按性态 / 作业精细分解，供内部决策；A、C、D 均为财务会计对外披露口径（对应 1.1、1.3）。' },
+  { q:'“决策有用观”强调会计信息应主要服务于？',
+    opts:['A. 税务机关征税','B. 内部管理者做出更优决策','C. 外部投资者合规披露','D. 银行信贷审批'],
+    ans:1,
+    exp:'决策有用观认为信息的有用性在于帮助内部管理者决策，这是管理会计的根本立足点（对应 1.1）。' }
+];
+
+function openQuiz(){
+  let html = `<button class="close" onclick="closeOverlay()">✕</button>
+    <h2>📝 入门测验 · 管理会计认知</h2>
+    <div class="hint">共 3 题，单选；正确率 ≥ 80% 即可获得「认知通过」徽章。</div>`;
+  QUIZ.forEach((item,i)=>{
+    html += `<div class="quiz-q" data-q="${i}">
+      <div class="qt">${i+1}. ${item.q}</div>`;
+    item.opts.forEach((o,j)=>{
+      html += `<button class="opt" data-q="${i}" data-opt="${j}">${o}</button>`;
+    });
+    html += `<div class="exp" id="exp-${i}">💡 解析：${item.exp}</div></div>`;
+  });
+  html += `<div class="quiz-result" id="quizResult"></div>
+    <div style="text-align:center;margin-top:10px">
+      <button class="btn" id="submitQuiz">提交并评分</button></div>`;
+  panel.innerHTML = html;
+  overlay.classList.add('show');
+
+  // 选项高亮
+  panel.querySelectorAll('.opt').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const qi = btn.dataset.q;
+      panel.querySelectorAll(`.opt[data-q="${qi}"]`).forEach(b=>b.style.outline='none');
+      btn.style.outline='2px solid #2e7d32';
+      btn.dataset.pick = btn.dataset.opt;
+    });
+  });
+  document.getElementById('submitQuiz').addEventListener('click', scoreQuiz);
+}
+
+function scoreQuiz(){
+  let correct=0;
+  QUIZ.forEach((item,i)=>{
+    const picked = panel.querySelector(`.opt[data-q="${i}"][data-pick]`);
+    const exp = document.getElementById('exp-'+i);
+    exp.classList.add('show');
+    if(picked){
+      const po = +picked.dataset.opt;
+      if(po===item.ans){ correct++; picked.classList.add('correct'); }
+      else { picked.classList.add('wrong');
+        panel.querySelector(`.opt[data-q="${i}"][data-opt="${item.ans}"]`).classList.add('correct'); }
+    } else {
+      panel.querySelector(`.opt[data-q="${i}"][data-opt="${item.ans}"]`).classList.add('correct');
+    }
+  });
+  panel.querySelectorAll('.opt').forEach(b=>b.style.pointerEvents='none');
+  const rate = correct/QUIZ.length;
+  const res = document.getElementById('quizResult');
+  if(rate>=0.8){
+    res.textContent = `🎉 正确率 ${Math.round(rate*100)}% · 认知通过！`;
+    document.getElementById('badge').classList.add('show');
+  }else{
+    res.textContent = `正确率 ${Math.round(rate*100)}%（需 ≥80%）· 再回顾模块卡片后重试吧`;
+  }
+}
+
+document.getElementById('quizBtn').addEventListener('click', openQuiz);
+
+/* 悬停概念卡也展开（桌面端体验） */
+document.querySelectorAll('.concept').forEach(c=>{
+  c.addEventListener('mouseenter',()=>c.classList.add('open'));
+  c.addEventListener('mouseleave',()=>c.classList.remove('open'));
+});
+</script>
+</body>
+</html>
